@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>雙人回合制｜幾A幾B 對戰遊戲</title>
+<meta name="description" content="雙人回合制猜數字對戰遊戲，透過幾A幾B線索猜出對方的數字！" />
+<meta name="theme-color" content="#4f9cff" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#1a1d24;
+    --panel2:#22262f;
+    --border:#2e333d;
+    --text:#e8e9ec;
+    --muted:#8b8f99;
+    --accent:#4f9cff;
+    --accent2:#3ddc97;
+    --danger:#ff5c5c;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    display:flex;
+    justify-content:center;
+    padding:24px 12px;
+  }
+  .wrap{ width:100%; max-width:520px; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:13px; margin-bottom:20px; }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .card h2{ font-size:14px; margin:0 0 10px; color:var(--muted); font-weight:600; letter-spacing:.5px;}
+
+  .players{ display:flex; gap:10px; }
+  .player{
+    flex:1;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    font-size:14px;
+    position:relative;
+  }
+  .player .role{ color:var(--muted); font-size:11px; display:block; margin-bottom:4px; }
+  .player.me{ border-color:var(--accent); }
+  .dot{
+    width:8px; height:8px; border-radius:50%;
+    display:inline-block; margin-right:6px;
+    background:var(--muted);
+  }
+  .dot.online{ background:var(--accent2); }
+
+  button{
+    font-family:inherit;
+    font-size:14px;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    cursor:pointer;
+    background:var(--accent);
+    color:#fff;
+    transition:opacity .15s, transform .05s;
+  }
+  button:active{ transform:scale(0.98); }
+  button:disabled{
+    background:#333844;
+    color:#6b7078;
+    cursor:not-allowed;
+  }
+  button.danger{ background:var(--danger); }
+  button.full{ width:100%; }
+
+  input[type=text]{
+    font-family:inherit;
+    font-size:16px;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 12px;
+    width:100%;
+    letter-spacing:2px;
+  }
+  input[type=text]:disabled{ opacity:.4; }
+  input[type=text]:focus{ outline:none; border-color:var(--accent); }
+
+  .row{ display:flex; gap:8px; margin-top:10px; }
+  .row input{ flex:1; }
+
+  .turn-banner{
+    text-align:center;
+    font-size:13px;
+    padding:8px;
+    border-radius:8px;
+    background:var(--panel2);
+    color:var(--muted);
+    margin-bottom:12px;
+    border:1px dashed var(--border);
+  }
+  .turn-banner.active{
+    color:var(--accent2);
+    border-color:var(--accent2);
+    background:rgba(61,220,151,0.08);
+  }
+
+  #log{
+    height:220px;
+    overflow-y:auto;
+    background:#0b0d11;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:13px;
+    line-height:1.7;
+  }
+  #log .entry{ margin-bottom:4px; }
+  #log .sys{ color:var(--muted); font-style:italic; }
+  #log .guess{ color:var(--accent); }
+  #log .answer{ color:var(--accent2); }
+  #log .win{ color:#ffd35c; font-weight:700; }
+
+  .hidden{ display:none !important; }
+  .footer-actions{ display:flex; gap:10px; margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🎯 幾A幾B 對戰遊戲</h1>
+  <div class="sub">雙人回合制・玩家1 猜數字・玩家2 回答結果</div>
+
+  <div class="card">
+    <h2>連線狀態</h2>
+    <div class="players">
+      <div class="player" id="p1card">
+        <span class="role">玩家1・猜數字</span>
+        <span><span class="dot" id="p1dot"></span><span id="p1name">等待加入…</span></span>
+      </div>
+      <div class="player" id="p2card">
+        <span class="role">玩家2・回答結果</span>
+        <span><span class="dot" id="p2dot"></span><span id="p2name">等待加入…</span></span>
+      </div>
+    </div>
+    <button class="full" id="startBtn" style="margin-top:12px;" disabled>等待雙方連線…</button>
+  </div>
+
+  <div class="card hidden" id="gameCard">
+    <h2>遊戲進行中</h2>
+    <div class="turn-banner" id="turnBanner">—</div>
+
+    <div id="guessArea">
+      <label style="font-size:12px;color:var(--muted);">請輸入 4 位不重複數字</label>
+      <div class="row">
+        <input type="text" id="guessInput" maxlength="4" inputmode="numeric" placeholder="例如 1234" disabled />
+        <button id="guessBtn" disabled>送出猜測</button>
+      </div>
+    </div>
+
+    <div id="answerArea" style="margin-top:10px;">
+      <label style="font-size:12px;color:var(--muted);">請輸入結果，格式如 1A2B</label>
+      <div class="row">
+        <input type="text" id="answerInput" maxlength="5" placeholder="例如 1A2B" disabled />
+        <button id="answerBtn" disabled>送出回答</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="logCard">
+    <h2>對戰紀錄</h2>
+    <div id="log"></div>
+    <div class="footer-actions">
+      <button class="danger full" id="endBtn">結束遊戲</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+/* =========================================================
+   ⚠️ 請先填入你自己的 Supabase 專案設定
+   ========================================================= */
+const SUPABASE_URL = 'https://iokprragqaahhdhsgmsv.supabase.co'; // 👈 記得更換為你自己的 Project URL！
+	const SUPABASE_ANON_KEY = 'sb_publishable_AFbffXAoajQvjEJ4J-uksg_aHKpqLbR'; // 👈 記得更換為你自己的 ANON key！
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+/* =========================================================
+   基本資訊：使用者名稱 + 房間代碼
+   （房間代碼讓多組玩家可同時使用同一個網頁而不互相干擾，
+    雙方需輸入相同代碼才能配對）
+   ========================================================= */
+const myName = (prompt('請輸入你的暱稱：', '') || '玩家').trim().slice(0, 12);
+const roomId = (prompt('請輸入房間代碼（雙方需輸入相同代碼）：', 'room1') || 'room1').trim();
+const myId = crypto.randomUUID();
+const joinedAt = Date.now();
+
+/* =========================================================
+   遊戲狀態
+   ========================================================= */
+let myRole = null;      // 'player1' | 'player2' | null
+let turn = null;        // 'player1' | 'player2' | null（輪到誰採取行動）
+let gameStarted = false;
+let roomFull = false;
+
+/* =========================================================
+   DOM 參照
+   ========================================================= */
+const el = (id) => document.getElementById(id);
+const p1card = el('p1card'), p2card = el('p2card');
+const p1dot = el('p1dot'), p2dot = el('p2dot');
+const p1name = el('p1name'), p2name = el('p2name');
+const startBtn = el('startBtn');
+const gameCard = el('gameCard');
+const logCard = el('logCard');
+const turnBanner = el('turnBanner');
+const guessInput = el('guessInput'), guessBtn = el('guessBtn');
+const answerInput = el('answerInput'), answerBtn = el('answerBtn');
+const endBtn = el('endBtn');
+const logEl = el('log');
+
+function log(html, cls = '') {
+  const div = document.createElement('div');
+  div.className = 'entry' + (cls ? ' ' + cls : '');
+  div.innerHTML = html;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* =========================================================
+   updateTurn()：唯一負責控制按鈕 disabled 狀態的函式
+   每次狀態改變（開始/收到猜測/收到回答/角色確立）都必須呼叫它
+   ========================================================= */
+function updateTurn() {
+  // 開始按鈕：僅玩家2、雙方都上線、尚未開始時可點擊
+  const bothPresent = myRole !== null && p1name.dataset.filled === '1' && p2name.dataset.filled === '1';
+  if (roomFull) {
+    startBtn.textContent = '房間已滿（僅供兩人對戰）';
+    startBtn.disabled = true;
+  } else if (!bothPresent) {
+    startBtn.textContent = '等待雙方連線…';
+    startBtn.disabled = true;
+  } else if (gameStarted) {
+    startBtn.textContent = '遊戲進行中';
+    startBtn.disabled = true;
+  } else if (myRole === 'player2') {
+    startBtn.textContent = '開始遊戲';
+    startBtn.disabled = false;
+  } else {
+    startBtn.textContent = '等待玩家2開始遊戲…';
+    startBtn.disabled = true;
+  }
+
+  // 遊戲區塊顯示與否
+  gameCard.classList.toggle('hidden', !gameStarted);
+  logCard.classList.toggle('hidden', !gameStarted);
+
+  if (!gameStarted) return;
+
+  const isMyGuessTurn = myRole === 'player1' && turn === 'player1';
+  const isMyAnswerTurn = myRole === 'player2' && turn === 'player2';
+
+  guessInput.disabled = !isMyGuessTurn;
+  guessBtn.disabled = !isMyGuessTurn;
+  answerInput.disabled = !isMyAnswerTurn;
+  answerBtn.disabled = !isMyAnswerTurn;
+
+  if (turn === 'player1') {
+    turnBanner.textContent = myRole === 'player1' ? '輪到你猜數字！' : '等待玩家1猜數字…';
+    turnBanner.classList.toggle('active', myRole === 'player1');
+  } else if (turn === 'player2') {
+    turnBanner.textContent = myRole === 'player2' ? '輪到你回答結果！' : '等待玩家2回答結果…';
+    turnBanner.classList.toggle('active', myRole === 'player2');
+  }
+}
+
+/* =========================================================
+   Supabase Channel：presence 同步身份 + broadcast 傳輸遊戲資料
+   ========================================================= */
+const channel = supabase.channel(`game:${roomId}`, {
+  config: {
+    presence: { key: myId },
+    broadcast: { self: true }, // 自己送出的 broadcast 也會收到，確保雙方走同一套邏輯
+  },
+});
+
+function renderPlayerCard(role, name, online) {
+  const nameEl = role === 'player1' ? p1name : p2name;
+  const dotEl = role === 'player1' ? p1dot : p2dot;
+  const cardEl = role === 'player1' ? p1card : p2card;
+  nameEl.textContent = name + (myRole === role ? '（你）' : '');
+  nameEl.dataset.filled = online ? '1' : '0';
+  dotEl.classList.toggle('online', online);
+  cardEl.classList.toggle('me', myRole === role);
+}
+
+function resetPlayerCard(role) {
+  const nameEl = role === 'player1' ? p1name : p2name;
+  const dotEl = role === 'player1' ? p1dot : p2dot;
+  const cardEl = role === 'player1' ? p1card : p2card;
+  nameEl.textContent = '等待加入…';
+  nameEl.dataset.filled = '0';
+  dotEl.classList.remove('online');
+  cardEl.classList.remove('me');
+}
+
+// presence sync：依照 joinedAt 時間排序，決定玩家1 / 玩家2
+channel.on('presence', { event: 'sync' }, () => {
+  const state = channel.presenceState();
+  const all = Object.values(state)
+    .flat()
+    .map((m) => ({ id: m.id, name: m.name, joinedAt: m.joinedAt }))
+    .sort((a, b) => a.joinedAt - b.joinedAt || (a.id > b.id ? 1 : -1));
+
+  roomFull = all.length > 2;
+
+  resetPlayerCard('player1');
+  resetPlayerCard('player2');
+  myRole = null;
+
+  const p1 = all[0];
+  const p2 = all[1];
+
+  if (p1) {
+    if (p1.id === myId) myRole = 'player1';
+  }
+  if (p2) {
+    if (p2.id === myId) myRole = 'player2';
+  }
+
+  if (p1) renderPlayerCard('player1', p1.name, true);
+  if (p2) renderPlayerCard('player2', p2.name, true);
+
+  updateTurn();
+});
+
+// 收到「開始遊戲」廣播 -> 務必呼叫 updateTurn()
+channel.on('broadcast', { event: 'start' }, () => {
+  gameStarted = true;
+  turn = 'player1';
+  logEl.innerHTML = '';
+  log('🎮 遊戲開始！由玩家1 先猜測數字。', 'sys');
+  updateTurn();
+});
+
+// 收到「猜測」廣播 -> 務必呼叫 updateTurn()
+channel.on('broadcast', { event: 'guess' }, (msg) => {
+  const { name, value } = msg.payload;
+  log(`🔢 <b>${escapeHtml(name)}</b> 猜測：<b>${escapeHtml(value)}</b>`, 'guess');
+  turn = 'player2';
+  updateTurn();
+});
+
+// 收到「回答」廣播 -> 務必呼叫 updateTurn()
+channel.on('broadcast', { event: 'answer' }, (msg) => {
+  const { name, value } = msg.payload;
+  log(`✅ <b>${escapeHtml(name)}</b> 回答：<b>${escapeHtml(value)}</b>`, 'answer');
+  if (/^4A0B$/i.test(value.trim())) {
+    log('🏆 猜中了！遊戲結束，恭喜玩家1！', 'win');
+    gameStarted = false;
+  } else {
+    turn = 'player1';
+  }
+  updateTurn();
+});
+
+// 收到「結束遊戲」廣播
+channel.on('broadcast', { event: 'end' }, (msg) => {
+  log(`🚪 ${escapeHtml(msg.payload.name)} 已結束遊戲，即將重新整理頁面…`, 'sys');
+  setTimeout(() => location.reload(), 1200);
+});
+
+channel.subscribe(async (status) => {
+  if (status === 'SUBSCRIBED') {
+    await channel.track({ id: myId, name: myName, joinedAt });
+  }
+});
+
+/* =========================================================
+   使用者操作
+   ========================================================= */
+startBtn.addEventListener('click', () => {
+  if (myRole !== 'player2' || gameStarted) return;
+  channel.send({ type: 'broadcast', event: 'start', payload: { name: myName } });
+});
+
+guessBtn.addEventListener('click', () => {
+  const value = guessInput.value.trim();
+  if (!/^\d{4}$/.test(value)) {
+    alert('請輸入 4 位數字');
+    return;
+  }
+  channel.send({ type: 'broadcast', event: 'guess', payload: { name: myName, value } });
+  guessInput.value = '';
+});
+
+answerBtn.addEventListener('click', () => {
+  const value = answerInput.value.trim();
+  if (!/^[0-4]A[0-4]B$/i.test(value)) {
+    alert('請輸入正確格式，例如 1A2B');
+    return;
+  }
+  channel.send({ type: 'broadcast', event: 'answer', payload: { name: myName, value } });
+  answerInput.value = '';
+});
+
+endBtn.addEventListener('click', () => {
+  if (!confirm('確定要結束遊戲嗎？將通知對方並重新整理頁面。')) return;
+  channel.send({ type: 'broadcast', event: 'end', payload: { name: myName } });
+  setTimeout(() => location.reload(), 300);
+});
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+updateTurn();
+</script>
+
+<!-- PWA Service Worker 註冊 -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(reg => console.log('✅ Service Worker 已註冊', reg.scope))
+        .catch(err => console.warn('⚠️ Service Worker 註冊失敗', err));
+    });
+  }
+</script>
+</body>
+</html>
