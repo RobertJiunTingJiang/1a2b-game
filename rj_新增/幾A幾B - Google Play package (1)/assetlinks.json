@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.robertjiunting.game1a2b20260709",
+        "sha256_cert_fingerprints": ["9F:73:66:97:35:2B:E1:87:29:2E:22:5F:E9:FC:33:F3:DD:D8:50:FD:76:21:01:5A:63:E4:1E:99:00:68:FE:F4"]
+      }
+    }]

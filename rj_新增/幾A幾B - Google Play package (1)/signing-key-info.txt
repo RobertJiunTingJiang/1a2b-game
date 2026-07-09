@@ -1,0 +1,10 @@
+Keep this file and signing.keystore in a safe place. You'll need these files if you want to upload future versions of your PWA to the Google Play Store.
+
+Key store file: signing.keystore
+Key store password: ehYD9K0rp1WG
+Key alias: my-key-alias
+Key password: ehYD9K0rp1WG
+Signer's full name: 幾A幾B Admin
+Signer's organization: 幾A幾B 對戰遊戲
+Signer's organizational unit: Engineering
+Signer's country code: US

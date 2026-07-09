@@ -135,104 +135,265 @@
 
   .hidden{ display:none !important; }
   .footer-actions{ display:flex; gap:10px; margin-top:6px; }
+
+  /* ── 登入畫面 ── */
+  #loginScreen{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+  }
+  #loginScreen .logo{
+    text-align:center;
+    padding:32px 0 24px;
+  }
+  #loginScreen .logo .icon{
+    font-size:64px;
+    display:block;
+    margin-bottom:8px;
+    filter:drop-shadow(0 0 18px #4f9cff88);
+  }
+  #loginScreen .logo h1{
+    font-size:26px;
+    font-weight:700;
+    margin:0;
+    background:linear-gradient(135deg,#4f9cff,#3ddc97);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  #loginScreen .logo p{
+    color:var(--muted);
+    font-size:13px;
+    margin:6px 0 0;
+  }
+  .form-group{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:14px;
+  }
+  .form-group label{
+    font-size:12px;
+    color:var(--muted);
+    font-weight:600;
+    letter-spacing:.4px;
+  }
+  .form-group input{
+    letter-spacing:0;
+    font-size:15px;
+  }
+  .err-msg{
+    color:var(--danger);
+    font-size:12px;
+    margin-top:4px;
+    min-height:16px;
+  }
+
+  /* ── 自訂確認對話框 ── */
+  #confirmOverlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.65);
+    display:flex;align-items:center;justify-content:center;
+    z-index:999;
+    backdrop-filter:blur(4px);
+  }
+  #confirmBox{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:24px 20px 20px;
+    max-width:320px;
+    width:90%;
+    text-align:center;
+  }
+  #confirmBox p{ margin:0 0 20px; font-size:15px; line-height:1.6; }
+  #confirmBox .btn-row{ display:flex; gap:10px; }
+  #confirmBox .btn-row button{ flex:1; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>🎯 幾A幾B 對戰遊戲</h1>
-  <div class="sub">雙人回合制・玩家1 猜數字・玩家2 回答結果</div>
-
-  <div class="card">
-    <h2>連線狀態</h2>
-    <div class="players">
-      <div class="player" id="p1card">
-        <span class="role">玩家1・猜數字</span>
-        <span><span class="dot" id="p1dot"></span><span id="p1name">等待加入…</span></span>
-      </div>
-      <div class="player" id="p2card">
-        <span class="role">玩家2・回答結果</span>
-        <span><span class="dot" id="p2dot"></span><span id="p2name">等待加入…</span></span>
-      </div>
+  <!-- ══════════════════════════════════
+       登入畫面
+  ══════════════════════════════════ -->
+  <div id="loginScreen">
+    <div class="logo">
+      <span class="icon">🎯</span>
+      <h1>幾A幾B 對戰遊戲</h1>
+      <p>雙人回合制・猜數字對戰</p>
     </div>
-    <button class="full" id="startBtn" style="margin-top:12px;" disabled>等待雙方連線…</button>
-  </div>
-
-  <div class="card hidden" id="gameCard">
-    <h2>遊戲進行中</h2>
-    <div class="turn-banner" id="turnBanner">—</div>
-
-    <div id="guessArea">
-      <label style="font-size:12px;color:var(--muted);">請輸入 4 位不重複數字</label>
-      <div class="row">
-        <input type="text" id="guessInput" maxlength="4" inputmode="numeric" placeholder="例如 1234" disabled />
-        <button id="guessBtn" disabled>送出猜測</button>
+    <div class="card">
+      <h2>加入遊戲</h2>
+      <div class="form-group">
+        <label for="nameInput">你的暱稱</label>
+        <input type="text" id="nameInput" maxlength="12" placeholder="請輸入暱稱（最多12字）" autocomplete="off" />
       </div>
+      <div class="form-group">
+        <label for="roomInput">房間代碼</label>
+        <input type="text" id="roomInput" maxlength="20" placeholder="雙方需輸入相同代碼" autocomplete="off" />
+        <div class="err-msg" id="loginErr"></div>
+      </div>
+      <button class="full" id="joinBtn">進入房間</button>
     </div>
-
-    <div id="answerArea" style="margin-top:10px;">
-      <label style="font-size:12px;color:var(--muted);">請輸入結果，格式如 1A2B</label>
-      <div class="row">
-        <input type="text" id="answerInput" maxlength="5" placeholder="例如 1A2B" disabled />
-        <button id="answerBtn" disabled>送出回答</button>
-      </div>
+    <div class="card" style="font-size:13px;color:var(--muted);line-height:1.8;">
+      <h2>玩法說明</h2>
+      ① 雙方輸入相同房間代碼進入<br>
+      ② 玩家1 猜一組4位不重複數字<br>
+      ③ 玩家2 回答幾A幾B<br>
+      ④ 猜中4A0B即獲勝！
     </div>
   </div>
 
-  <div class="card hidden" id="logCard">
-    <h2>對戰紀錄</h2>
-    <div id="log"></div>
-    <div class="footer-actions">
-      <button class="danger full" id="endBtn">結束遊戲</button>
+  <!-- ══════════════════════════════════
+       遊戲畫面（登入後顯示）
+  ══════════════════════════════════ -->
+  <div id="gameScreen" class="hidden">
+    <h1>🎯 幾A幾B 對戰遊戲</h1>
+    <div class="sub" id="roomLabel"></div>
+
+    <div class="card">
+      <h2>連線狀態</h2>
+      <div class="players">
+        <div class="player" id="p1card">
+          <span class="role">玩家1・猜數字</span>
+          <span><span class="dot" id="p1dot"></span><span id="p1name">等待加入…</span></span>
+        </div>
+        <div class="player" id="p2card">
+          <span class="role">玩家2・回答結果</span>
+          <span><span class="dot" id="p2dot"></span><span id="p2name">等待加入…</span></span>
+        </div>
+      </div>
+      <button class="full" id="startBtn" style="margin-top:12px;" disabled>等待雙方連線…</button>
+    </div>
+
+    <div class="card hidden" id="gameCard">
+      <h2>遊戲進行中</h2>
+      <div class="turn-banner" id="turnBanner">—</div>
+
+      <div id="guessArea">
+        <label style="font-size:12px;color:var(--muted);">請輸入 4 位不重複數字</label>
+        <div class="row">
+          <input type="text" id="guessInput" maxlength="4" inputmode="numeric" placeholder="例如 1234" disabled />
+          <button id="guessBtn" disabled>送出猜測</button>
+        </div>
+      </div>
+
+      <div id="answerArea" style="margin-top:10px;">
+        <label style="font-size:12px;color:var(--muted);">請輸入結果，格式如 1A2B</label>
+        <div class="row">
+          <input type="text" id="answerInput" maxlength="5" placeholder="例如 1A2B" disabled />
+          <button id="answerBtn" disabled>送出回答</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="logCard">
+      <h2>對戰紀錄</h2>
+      <div id="log"></div>
+      <div class="footer-actions">
+        <button class="danger full" id="endBtn">結束遊戲</button>
+      </div>
     </div>
   </div>
 
 </div>
 
+<!-- 自訂確認對話框（取代 confirm()） -->
+<div id="confirmOverlay" class="hidden">
+  <div id="confirmBox">
+    <p id="confirmMsg"></p>
+    <div class="btn-row">
+      <button class="danger" id="confirmOk">確定</button>
+      <button id="confirmCancel" style="background:var(--panel2);color:var(--text);">取消</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-/* =========================================================
-   ⚠️ 請先填入你自己的 Supabase 專案設定
-   ========================================================= */
-const SUPABASE_URL = 'https://iokprragqaahhdhsgmsv.supabase.co'; // 👈 記得更換為你自己的 Project URL！
-	const SUPABASE_ANON_KEY = 'sb_publishable_AFbffXAoajQvjEJ4J-uksg_aHKpqLbR'; // 👈 記得更換為你自己的 ANON key！
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+const SUPABASE_URL = 'https://iokprragqaahhdhsgmsv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_AFbffXAoajQvjEJ4J-uksg_aHKpqLbR';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* =========================================================
-   基本資訊：使用者名稱 + 房間代碼
-   （房間代碼讓多組玩家可同時使用同一個網頁而不互相干擾，
-    雙方需輸入相同代碼才能配對）
+   自訂 confirm 對話框（取代原生 confirm()，TWA 相容）
    ========================================================= */
-const myName = (prompt('請輸入你的暱稱：', '') || '玩家').trim().slice(0, 12);
-const roomId = (prompt('請輸入房間代碼（雙方需輸入相同代碼）：', 'room1') || 'room1').trim();
-const myId = crypto.randomUUID();
-const joinedAt = Date.now();
+function showConfirm(msg) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('confirmOverlay');
+    document.getElementById('confirmMsg').textContent = msg;
+    overlay.classList.remove('hidden');
+    const ok = document.getElementById('confirmOk');
+    const cancel = document.getElementById('confirmCancel');
+    const cleanup = (result) => {
+      overlay.classList.add('hidden');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+  });
+}
+
+/* =========================================================
+   登入畫面邏輯
+   ========================================================= */
+const loginScreen = document.getElementById('loginScreen');
+const gameScreen  = document.getElementById('gameScreen');
+const nameInput   = document.getElementById('nameInput');
+const roomInput   = document.getElementById('roomInput');
+const loginErr    = document.getElementById('loginErr');
+const joinBtn     = document.getElementById('joinBtn');
+
+// 記住上次的暱稱和房間
+nameInput.value = localStorage.getItem('1a2b_name') || '';
+roomInput.value = localStorage.getItem('1a2b_room') || 'room1';
+
+joinBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim().slice(0, 12);
+  const room = roomInput.value.trim();
+  if (!name) { loginErr.textContent = '請輸入暱稱'; return; }
+  if (!room) { loginErr.textContent = '請輸入房間代碼'; return; }
+  loginErr.textContent = '';
+  localStorage.setItem('1a2b_name', name);
+  localStorage.setItem('1a2b_room', room);
+  startGame(name, room);
+});
+
+// Enter 鍵快速加入
+[nameInput, roomInput].forEach(inp => {
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') joinBtn.click(); });
+});
 
 /* =========================================================
    遊戲狀態
    ========================================================= */
-let myRole = null;      // 'player1' | 'player2' | null
-let turn = null;        // 'player1' | 'player2' | null（輪到誰採取行動）
+let myName, myId, roomId, joinedAt;
+let myRole = null;
+let turn   = null;
 let gameStarted = false;
-let roomFull = false;
+let roomFull    = false;
 
 /* =========================================================
    DOM 參照
    ========================================================= */
 const el = (id) => document.getElementById(id);
 const p1card = el('p1card'), p2card = el('p2card');
-const p1dot = el('p1dot'), p2dot = el('p2dot');
+const p1dot  = el('p1dot'),  p2dot  = el('p2dot');
 const p1name = el('p1name'), p2name = el('p2name');
-const startBtn = el('startBtn');
-const gameCard = el('gameCard');
-const logCard = el('logCard');
+const startBtn   = el('startBtn');
+const gameCard   = el('gameCard');
+const logCard    = el('logCard');
 const turnBanner = el('turnBanner');
 const guessInput = el('guessInput'), guessBtn = el('guessBtn');
-const answerInput = el('answerInput'), answerBtn = el('answerBtn');
-const endBtn = el('endBtn');
-const logEl = el('log');
+const answerInput= el('answerInput'),answerBtn= el('answerBtn');
+const endBtn     = el('endBtn');
+const logEl      = el('log');
 
 function log(html, cls = '') {
   const div = document.createElement('div');
@@ -243,11 +404,9 @@ function log(html, cls = '') {
 }
 
 /* =========================================================
-   updateTurn()：唯一負責控制按鈕 disabled 狀態的函式
-   每次狀態改變（開始/收到猜測/收到回答/角色確立）都必須呼叫它
+   updateTurn()
    ========================================================= */
 function updateTurn() {
-  // 開始按鈕：僅玩家2、雙方都上線、尚未開始時可點擊
   const bothPresent = myRole !== null && p1name.dataset.filled === '1' && p2name.dataset.filled === '1';
   if (roomFull) {
     startBtn.textContent = '房間已滿（僅供兩人對戰）';
@@ -266,19 +425,18 @@ function updateTurn() {
     startBtn.disabled = true;
   }
 
-  // 遊戲區塊顯示與否
   gameCard.classList.toggle('hidden', !gameStarted);
   logCard.classList.toggle('hidden', !gameStarted);
 
   if (!gameStarted) return;
 
-  const isMyGuessTurn = myRole === 'player1' && turn === 'player1';
+  const isMyGuessTurn  = myRole === 'player1' && turn === 'player1';
   const isMyAnswerTurn = myRole === 'player2' && turn === 'player2';
 
-  guessInput.disabled = !isMyGuessTurn;
-  guessBtn.disabled = !isMyGuessTurn;
+  guessInput.disabled  = !isMyGuessTurn;
+  guessBtn.disabled    = !isMyGuessTurn;
   answerInput.disabled = !isMyAnswerTurn;
-  answerBtn.disabled = !isMyAnswerTurn;
+  answerBtn.disabled   = !isMyAnswerTurn;
 
   if (turn === 'player1') {
     turnBanner.textContent = myRole === 'player1' ? '輪到你猜數字！' : '等待玩家1猜數字…';
@@ -290,148 +448,162 @@ function updateTurn() {
 }
 
 /* =========================================================
-   Supabase Channel：presence 同步身份 + broadcast 傳輸遊戲資料
+   startGame：登入後初始化 Supabase channel
    ========================================================= */
-const channel = supabase.channel(`game:${roomId}`, {
-  config: {
-    presence: { key: myId },
-    broadcast: { self: true }, // 自己送出的 broadcast 也會收到，確保雙方走同一套邏輯
-  },
-});
+function startGame(name, room) {
+  myName   = name;
+  roomId   = room;
+  myId     = crypto.randomUUID();
+  joinedAt = Date.now();
 
-function renderPlayerCard(role, name, online) {
-  const nameEl = role === 'player1' ? p1name : p2name;
-  const dotEl = role === 'player1' ? p1dot : p2dot;
-  const cardEl = role === 'player1' ? p1card : p2card;
-  nameEl.textContent = name + (myRole === role ? '（你）' : '');
-  nameEl.dataset.filled = online ? '1' : '0';
-  dotEl.classList.toggle('online', online);
-  cardEl.classList.toggle('me', myRole === role);
-}
+  // 切換畫面
+  loginScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+  el('roomLabel').textContent = `房間：${room}　暱稱：${name}`;
 
-function resetPlayerCard(role) {
-  const nameEl = role === 'player1' ? p1name : p2name;
-  const dotEl = role === 'player1' ? p1dot : p2dot;
-  const cardEl = role === 'player1' ? p1card : p2card;
-  nameEl.textContent = '等待加入…';
-  nameEl.dataset.filled = '0';
-  dotEl.classList.remove('online');
-  cardEl.classList.remove('me');
-}
+  const channel = supabase.channel(`game:${roomId}`, {
+    config: {
+      presence: { key: myId },
+      broadcast: { self: true },
+    },
+  });
 
-// presence sync：依照 joinedAt 時間排序，決定玩家1 / 玩家2
-channel.on('presence', { event: 'sync' }, () => {
-  const state = channel.presenceState();
-  const all = Object.values(state)
-    .flat()
-    .map((m) => ({ id: m.id, name: m.name, joinedAt: m.joinedAt }))
-    .sort((a, b) => a.joinedAt - b.joinedAt || (a.id > b.id ? 1 : -1));
-
-  roomFull = all.length > 2;
-
-  resetPlayerCard('player1');
-  resetPlayerCard('player2');
-  myRole = null;
-
-  const p1 = all[0];
-  const p2 = all[1];
-
-  if (p1) {
-    if (p1.id === myId) myRole = 'player1';
-  }
-  if (p2) {
-    if (p2.id === myId) myRole = 'player2';
+  function renderPlayerCard(role, pname, online) {
+    const nameEl = role === 'player1' ? p1name : p2name;
+    const dotEl  = role === 'player1' ? p1dot  : p2dot;
+    const cardEl = role === 'player1' ? p1card : p2card;
+    nameEl.textContent = pname + (myRole === role ? '（你）' : '');
+    nameEl.dataset.filled = online ? '1' : '0';
+    dotEl.classList.toggle('online', online);
+    cardEl.classList.toggle('me', myRole === role);
   }
 
-  if (p1) renderPlayerCard('player1', p1.name, true);
-  if (p2) renderPlayerCard('player2', p2.name, true);
+  function resetPlayerCard(role) {
+    const nameEl = role === 'player1' ? p1name : p2name;
+    const dotEl  = role === 'player1' ? p1dot  : p2dot;
+    const cardEl = role === 'player1' ? p1card : p2card;
+    nameEl.textContent = '等待加入…';
+    nameEl.dataset.filled = '0';
+    dotEl.classList.remove('online');
+    cardEl.classList.remove('me');
+  }
 
-  updateTurn();
-});
+  channel.on('presence', { event: 'sync' }, () => {
+    const state = channel.presenceState();
+    const all = Object.values(state)
+      .flat()
+      .map((m) => ({ id: m.id, name: m.name, joinedAt: m.joinedAt }))
+      .sort((a, b) => a.joinedAt - b.joinedAt || (a.id > b.id ? 1 : -1));
 
-// 收到「開始遊戲」廣播 -> 務必呼叫 updateTurn()
-channel.on('broadcast', { event: 'start' }, () => {
-  gameStarted = true;
-  turn = 'player1';
-  logEl.innerHTML = '';
-  log('🎮 遊戲開始！由玩家1 先猜測數字。', 'sys');
-  updateTurn();
-});
+    roomFull = all.length > 2;
+    resetPlayerCard('player1');
+    resetPlayerCard('player2');
+    myRole = null;
 
-// 收到「猜測」廣播 -> 務必呼叫 updateTurn()
-channel.on('broadcast', { event: 'guess' }, (msg) => {
-  const { name, value } = msg.payload;
-  log(`🔢 <b>${escapeHtml(name)}</b> 猜測：<b>${escapeHtml(value)}</b>`, 'guess');
-  turn = 'player2';
-  updateTurn();
-});
+    const p1 = all[0];
+    const p2 = all[1];
+    if (p1 && p1.id === myId) myRole = 'player1';
+    if (p2 && p2.id === myId) myRole = 'player2';
+    if (p1) renderPlayerCard('player1', p1.name, true);
+    if (p2) renderPlayerCard('player2', p2.name, true);
+    updateTurn();
+  });
 
-// 收到「回答」廣播 -> 務必呼叫 updateTurn()
-channel.on('broadcast', { event: 'answer' }, (msg) => {
-  const { name, value } = msg.payload;
-  log(`✅ <b>${escapeHtml(name)}</b> 回答：<b>${escapeHtml(value)}</b>`, 'answer');
-  if (/^4A0B$/i.test(value.trim())) {
-    log('🏆 猜中了！遊戲結束，恭喜玩家1！', 'win');
-    gameStarted = false;
-  } else {
+  channel.on('broadcast', { event: 'start' }, () => {
+    gameStarted = true;
     turn = 'player1';
-  }
+    logEl.innerHTML = '';
+    log('🎮 遊戲開始！由玩家1 先猜測數字。', 'sys');
+    updateTurn();
+  });
+
+  channel.on('broadcast', { event: 'guess' }, (msg) => {
+    const { name: n, value } = msg.payload;
+    log(`🔢 <b>${escapeHtml(n)}</b> 猜測：<b>${escapeHtml(value)}</b>`, 'guess');
+    turn = 'player2';
+    updateTurn();
+  });
+
+  channel.on('broadcast', { event: 'answer' }, (msg) => {
+    const { name: n, value } = msg.payload;
+    log(`✅ <b>${escapeHtml(n)}</b> 回答：<b>${escapeHtml(value)}</b>`, 'answer');
+    if (/^4A0B$/i.test(value.trim())) {
+      log('🏆 猜中了！遊戲結束，恭喜玩家1！', 'win');
+      gameStarted = false;
+    } else {
+      turn = 'player1';
+    }
+    updateTurn();
+  });
+
+  channel.on('broadcast', { event: 'end' }, (msg) => {
+    log(`🚪 ${escapeHtml(msg.payload.name)} 已結束遊戲，即將返回首頁…`, 'sys');
+    setTimeout(() => {
+      gameScreen.classList.add('hidden');
+      loginScreen.classList.remove('hidden');
+      gameStarted = false;
+      turn = null;
+      logEl.innerHTML = '';
+    }, 1200);
+  });
+
+  channel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await channel.track({ id: myId, name: myName, joinedAt });
+    }
+  });
+
+  /* ── 使用者操作 ── */
+  startBtn.addEventListener('click', () => {
+    if (myRole !== 'player2' || gameStarted) return;
+    channel.send({ type: 'broadcast', event: 'start', payload: { name: myName } });
+  });
+
+  guessBtn.addEventListener('click', () => {
+    const value = guessInput.value.trim();
+    if (!/^\d{4}$/.test(value)) {
+      loginErr.textContent = '';
+      // 用畫面提示取代 alert
+      turnBanner.textContent = '⚠️ 請輸入 4 位數字！';
+      setTimeout(updateTurn, 1500);
+      return;
+    }
+    channel.send({ type: 'broadcast', event: 'guess', payload: { name: myName, value } });
+    guessInput.value = '';
+  });
+
+  answerBtn.addEventListener('click', () => {
+    const value = answerInput.value.trim();
+    if (!/^[0-4]A[0-4]B$/i.test(value)) {
+      turnBanner.textContent = '⚠️ 格式錯誤！請輸入如 1A2B';
+      setTimeout(updateTurn, 1500);
+      return;
+    }
+    channel.send({ type: 'broadcast', event: 'answer', payload: { name: myName, value } });
+    answerInput.value = '';
+  });
+
+  endBtn.addEventListener('click', async () => {
+    const ok = await showConfirm('確定要結束遊戲嗎？將通知對方並返回首頁。');
+    if (!ok) return;
+    channel.send({ type: 'broadcast', event: 'end', payload: { name: myName } });
+    setTimeout(() => {
+      gameScreen.classList.add('hidden');
+      loginScreen.classList.remove('hidden');
+      gameStarted = false;
+      turn = null;
+      logEl.innerHTML = '';
+    }, 300);
+  });
+
   updateTurn();
-});
-
-// 收到「結束遊戲」廣播
-channel.on('broadcast', { event: 'end' }, (msg) => {
-  log(`🚪 ${escapeHtml(msg.payload.name)} 已結束遊戲，即將重新整理頁面…`, 'sys');
-  setTimeout(() => location.reload(), 1200);
-});
-
-channel.subscribe(async (status) => {
-  if (status === 'SUBSCRIBED') {
-    await channel.track({ id: myId, name: myName, joinedAt });
-  }
-});
-
-/* =========================================================
-   使用者操作
-   ========================================================= */
-startBtn.addEventListener('click', () => {
-  if (myRole !== 'player2' || gameStarted) return;
-  channel.send({ type: 'broadcast', event: 'start', payload: { name: myName } });
-});
-
-guessBtn.addEventListener('click', () => {
-  const value = guessInput.value.trim();
-  if (!/^\d{4}$/.test(value)) {
-    alert('請輸入 4 位數字');
-    return;
-  }
-  channel.send({ type: 'broadcast', event: 'guess', payload: { name: myName, value } });
-  guessInput.value = '';
-});
-
-answerBtn.addEventListener('click', () => {
-  const value = answerInput.value.trim();
-  if (!/^[0-4]A[0-4]B$/i.test(value)) {
-    alert('請輸入正確格式，例如 1A2B');
-    return;
-  }
-  channel.send({ type: 'broadcast', event: 'answer', payload: { name: myName, value } });
-  answerInput.value = '';
-});
-
-endBtn.addEventListener('click', () => {
-  if (!confirm('確定要結束遊戲嗎？將通知對方並重新整理頁面。')) return;
-  channel.send({ type: 'broadcast', event: 'end', payload: { name: myName } });
-  setTimeout(() => location.reload(), 300);
-});
+}
 
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 }
-
-updateTurn();
 </script>
 
 <!-- PWA Service Worker 註冊 -->
